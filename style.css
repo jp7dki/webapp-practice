@@ -1,14 +1,28 @@
 :root {
-  --bg: #f5f5f7;
-  --fg: #1d1d1f;
-  --muted: #6e6e73;
+  --bg: #e8e2d9;
+  --muted: #6b5d52;
+  --panel-top: #3a2c23;
+  --panel-bottom: #1f1712;
+  --panel-shadow: rgba(60, 40, 25, 0.35);
+
+  /* ニキシー管の発光色 */
+  --glow-core: #ffe2bd;
+  --glow-edge: #ff9a3c;
+  --glow-mid: #ff7a1a;
+  --glow-outer: rgba(255, 90, 0, 0.55);
+  --cathode-off: rgba(150, 128, 110, 0.22);
+
+  /* 管1本の幅。画面幅と高さの両方に合わせて縮む */
+  --w: max(34px, min(10.5vw, 26vh, 110px));
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #0b0b0f;
-    --fg: #f5f5f7;
-    --muted: #a1a1a6;
+    --bg: #0b0908;
+    --muted: #a8978a;
+    --panel-top: #1d1612;
+    --panel-bottom: #110d0b;
+    --panel-shadow: rgba(0, 0, 0, 0.6);
   }
 }
 
@@ -28,25 +42,160 @@ body {
   justify-content: center;
   padding: 16px;
   background: var(--bg);
-  color: var(--fg);
   font-family: system-ui, -apple-system, "Segoe UI", "Hiragino Sans", "Noto Sans JP", sans-serif;
 }
 
 .clock {
-  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: calc(var(--w) * 0.3);
 }
 
 .clock__date {
-  margin: 0 0 0.5rem;
-  font-size: clamp(1rem, 4vw, 2rem);
+  margin: 0;
+  font-size: clamp(0.95rem, 3.5vw, 1.6rem);
+  letter-spacing: 0.08em;
   color: var(--muted);
 }
 
-.clock__time {
-  margin: 0;
-  font-size: clamp(3rem, 18vw, 14rem);
-  font-weight: 700;
+/* 管を並べる台座 */
+.panel {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--w) * 0.12);
+  padding: calc(var(--w) * 0.3) calc(var(--w) * 0.35);
+  border-radius: calc(var(--w) * 0.2);
+  background: linear-gradient(var(--panel-top), var(--panel-bottom));
+  box-shadow:
+    0 calc(var(--w) * 0.12) calc(var(--w) * 0.4) var(--panel-shadow),
+    inset 0 1px 0 rgba(255, 255, 255, 0.07);
+}
+
+.pair {
+  display: flex;
+  gap: calc(var(--w) * 0.08);
+}
+
+/* ガラス管 */
+.tube {
+  position: relative;
+  width: var(--w);
+  height: calc(var(--w) * 1.85);
+  overflow: hidden;
+  border-radius:
+    calc(var(--w) * 0.5) calc(var(--w) * 0.5)
+    calc(var(--w) * 0.16) calc(var(--w) * 0.16);
+  background:
+    linear-gradient(to top, #2b231e 0 7%, transparent 7%),
+    radial-gradient(ellipse at 50% 55%, rgba(255, 110, 30, 0.16), transparent 70%),
+    linear-gradient(#1b1513, #0c0908);
+  box-shadow:
+    inset 0 0 calc(var(--w) * 0.15) rgba(0, 0, 0, 0.9),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.09),
+    0 calc(var(--w) * 0.04) calc(var(--w) * 0.08) rgba(0, 0, 0, 0.6);
+}
+
+/* 前面のアノードメッシュ */
+.tube::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  background-image: radial-gradient(circle, transparent 52%, rgba(150, 130, 110, 0.2) 58%, transparent 66%);
+  background-size: calc(var(--w) * 0.09) calc(var(--w) * 0.09);
+  pointer-events: none;
+}
+
+/* ガラスの反射 */
+.tube::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  border-radius: inherit;
+  background:
+    linear-gradient(100deg, rgba(255, 255, 255, 0.16) 0%, transparent 22%, transparent 78%, rgba(255, 255, 255, 0.06) 100%),
+    radial-gradient(ellipse at 35% 6%, rgba(255, 255, 255, 0.18), transparent 30%);
+  pointer-events: none;
+}
+
+/* 0〜9の陰極（重ねて配置し、点灯中の1つだけ光らせる） */
+.cathode {
+  position: absolute;
+  inset: 0 0 7% 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "Helvetica Neue", "Arial Nova", Arial, sans-serif;
+  font-size: calc(var(--w) * 1.3);
+  font-weight: 300;
   line-height: 1;
-  letter-spacing: 0.02em;
-  font-variant-numeric: tabular-nums;
+  color: transparent;
+  -webkit-text-stroke: max(1px, calc(var(--w) * 0.012)) var(--cathode-off);
+  transition: color 0.12s ease-out, text-shadow 0.12s ease-out;
+}
+
+.cathode.is-lit {
+  z-index: 1;
+  color: var(--glow-core);
+  -webkit-text-stroke: max(1px, calc(var(--w) * 0.014)) var(--glow-edge);
+  text-shadow:
+    0 0 calc(var(--w) * 0.03) var(--glow-edge),
+    0 0 calc(var(--w) * 0.1) var(--glow-mid),
+    0 0 calc(var(--w) * 0.3) var(--glow-outer);
+  animation: flicker 5s infinite;
+}
+
+/* 時・分・秒の区切り（ネオン球） */
+.sep {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--w) * 0.4);
+}
+
+.sep i {
+  display: block;
+  width: calc(var(--w) * 0.13);
+  height: calc(var(--w) * 0.13);
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 40%, var(--glow-core), var(--glow-mid) 70%);
+  box-shadow:
+    0 0 calc(var(--w) * 0.08) var(--glow-mid),
+    0 0 calc(var(--w) * 0.2) var(--glow-outer);
+  transition: opacity 0.2s ease-out;
+}
+
+.panel.is-blink-off .sep i {
+  opacity: 0.2;
+}
+
+/* わずかなちらつき */
+@keyframes flicker {
+  0%, 100% { opacity: 1; }
+  47% { opacity: 1; }
+  48% { opacity: 0.92; }
+  49% { opacity: 1; }
+  83% { opacity: 0.96; }
+  84% { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cathode.is-lit {
+    animation: none;
+  }
+
+  .cathode,
+  .sep i {
+    transition: none;
+  }
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
 }
